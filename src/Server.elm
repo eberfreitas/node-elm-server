@@ -9,17 +9,20 @@ type alias Model =
 
 
 type Msg
-    = Request RequestResponse
+    = Request RequestResolve
 
 
-type alias RequestResponse =
-    { req : Value, res : Value }
+type alias RequestResolve =
+    { request : Value
+    , resolve : Value
+    }
 
 
 type alias RequestInfo =
     { url : String }
 
 
+main : Program () Model Msg
 main =
     worker
         { init = \() -> ( 0, Cmd.none )
@@ -28,36 +31,37 @@ main =
         }
 
 
-port onRequest : (RequestResponse -> msg) -> Sub msg
+port onRequest : (RequestResolve -> msg) -> Sub msg
 
 
-port response : ( RequestResponse, Int, String ) -> Cmd msg
+port resolve : ( RequestResolve, Int, String ) -> Cmd msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg count =
     case msg of
-        Request ({ req, res } as requestResponse) ->
-            case decodeRequest req of
+        Request ({ request } as requestResolve) ->
+            case decodeRequest request of
                 Ok { url } ->
                     let
                         ( newCount, status, responseText ) =
                             handleRequest url count
                     in
                     ( newCount
-                    , response ( requestResponse, status, responseText )
+                    , resolve ( requestResolve, status, responseText )
                     )
 
-                Err err ->
+                Err _ ->
                     ( count
-                    , response
-                        ( requestResponse
+                    , resolve
+                        ( requestResolve
                         , 500
                         , "There was an error processing the request"
                         )
                     )
 
 
+handleRequest : String -> Int -> ( Int, Int, String )
 handleRequest url count =
     let
         ok () =

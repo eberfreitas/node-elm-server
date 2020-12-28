@@ -5,13 +5,16 @@ const {
 
 const app = Server.init();
 
-app.ports.response.subscribe(([{ req, res }, status, response]) => {
-  res.statusCode = status;
-  res.end(response);
-});
-
 http
-  .createServer((req, res) => {
-    app.ports.onRequest.send({ req, res });
+  .createServer((request, res) => {
+    new Promise(resolve =>  app.ports.onRequest.send({ request, resolve }))
+      .then(({ status, response }) => {
+        res.statusCode = status;
+        res.end(response);
+      });
   })
   .listen(3000);
+
+app.ports.resolve.subscribe(([{ resolve }, status, response]) => {
+  resolve({ status, response });
+});
